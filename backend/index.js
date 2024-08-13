@@ -10,7 +10,7 @@ import Chat from './models/chat.js'
 import UserChats from './models/userChat.js'
 dotenv.config();
 
-const port = process.env.PORT || 8000;
+const port =  8000;
 const app = express();
 
 
