@@ -23,7 +23,6 @@ app.use(cors({
     credentials: true,
 }))
 
-console.log( process.env.CLIENT_URL)
 app.use(express.json());
 
 const connect = async () => {
