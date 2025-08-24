@@ -11,6 +11,7 @@ if (!PUBLISHABLE_KEY) {
 const queryClient = new QueryClient();
 
 const RootLayout = () => {
+  console.log(PUBLISHABLE_KEY)
   return (
     <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/">
       <QueryClientProvider client={queryClient}>

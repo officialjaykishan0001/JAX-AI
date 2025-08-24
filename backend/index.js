@@ -1,48 +1,58 @@
-import './custom_modules/fetch-polyfill.js'
-import express from 'express';
-import cors from 'cors'
-import ImageKit from 'imagekit';
-import dotenv from 'dotenv';
-import mongoose from 'mongoose';
-import { ClerkExpressRequireAuth } from '@clerk/clerk-sdk-node';
+import "./custom_modules/fetch-polyfill.js";
+import express from "express";
+import cors from "cors";
+import ImageKit from "imagekit";
+import dotenv from "dotenv";
+import mongoose from "mongoose";
+// import { ClerkExpressRequireAuth } from "@clerk/clerk-sdk-node";
+import { clerkMiddleware, requireAuth, getAuth } from "@clerk/express";
 
-import Chat from './models/chat.js'
-import UserChats from './models/userChat.js'
+import Chat from "./models/chat.js";
+import UserChats from "./models/userChat.js";
 dotenv.config();
 
-const port =  8000;
+const port = 8000;
 const app = express();
-
 
 // const __filename = fileURLToPath(import.meta.url);
 // const __dirname = path.dirname(__filename);
 
-
-app.use(cors({
+app.use(
+  cors({
     origin: process.env.CLIENT_URL,
     credentials: true,
-}))
+  })
+);
 
+app.use(clerkMiddleware());
 app.use(express.json());
 
 const connect = async () => {
-    try {
-        await mongoose.connect(process.env.MONGO)
-        console.log("Connected to MongoDB")
-    } catch (err) {
-        console.log(err)
-    }
-}
+  try {
+    await mongoose.connect(process.env.MONGO);
+    console.log("Connected to MongoDB");
+  } catch (err) {
+    console.log(err);
+  }
+};
 
 const imagekit = new ImageKit({
-    urlEndpoint: process.env.VITE_IMAGE_KIT_ENDPOINT,
-    publicKey: process.env.VITE_IMAGE_KIT_PUBLIC_KEY,
-    privateKey: process.env.VITE_IMAGE_KIT_PRIVATE_KEY
+  urlEndpoint: process.env.VITE_IMAGE_KIT_ENDPOINT,
+  publicKey: process.env.VITE_IMAGE_KIT_PUBLIC_KEY,
+  privateKey: process.env.VITE_IMAGE_KIT_PRIVATE_KEY,
 });
 
+if (!process.env.CLERK_SECRET_KEY) {
+  throw new Error("Missing Clerk Secret Key in backend .env");
+}
+
+if (!process.env.CLERK_PUBLISHABLE_KEY) {
+  throw new Error("Missing Clerk Publishable Key in Backend .env");
+}
+
 app.get("/api/upload", (req, res) => {
-    const result = imagekit.getAuthenticationParameters();
-    res.send(result);
+  const result = imagekit.getAuthenticationParameters();
+  res.send(result);
 });
 
 // app.get("/api/test", ClerkExpressRequireAuth(), (req, res) =>{
@@ -50,8 +60,9 @@ app.get("/api/upload", (req, res) => {
 //     console.log(userId)
 //     res.send("Success")
 // })
-app.post("/api/chats", ClerkExpressRequireAuth(), async (req, res) => {
-  const userId = req.auth.userId;
+app.post("/api/chats", requireAuth(), async (req, res) => {
+  const { userId } = getAuth(req);
+
   const { text } = req.body;
 
   try {
@@ -101,12 +112,14 @@ app.post("/api/chats", ClerkExpressRequireAuth(), async (req, res) => {
   }
 });
 
-app.get("/api/userchats", ClerkExpressRequireAuth(), async (req, res) => {
-  const userId = req.auth.userId;
+app.get("/api/userchats", requireAuth(), async (req, res) => {
+  const { userId } = getAuth(req);
 
   try {
     const userChats = await UserChats.find({ userId });
-
+    if (!userChats) {
+      return res.status(400).send("No chat yet!");
+    }
     res.status(200).send(userChats[0].chats);
   } catch (err) {
     console.log(err);
@@ -114,12 +127,12 @@ app.get("/api/userchats", ClerkExpressRequireAuth(), async (req, res) => {
   }
 });
 
-app.get("/api/chats/:id", ClerkExpressRequireAuth(), async (req, res) => {
-  const userId = req.auth.userId;
+app.get("/api/chats/:id", requireAuth(), async (req, res) => {
+  const { userId } = getAuth(req);
 
   try {
     const chat = await Chat.findOne({ _id: req.params.id, userId });
-
+   
     res.status(200).send(chat);
   } catch (err) {
     console.log(err);
@@ -127,10 +140,8 @@ app.get("/api/chats/:id", ClerkExpressRequireAuth(), async (req, res) => {
   }
 });
 
-
-
-app.put("/api/chats/:id", ClerkExpressRequireAuth(), async (req, res) => {
-  const userId = req.auth.userId;
+app.put("/api/chats/:id", requireAuth(), async (req, res) => {
+  const { userId } = getAuth(req);
 
   const { question, answer, img } = req.body;
 
@@ -159,12 +170,10 @@ app.put("/api/chats/:id", ClerkExpressRequireAuth(), async (req, res) => {
   }
 });
 
-
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(401).send("Unauthenticated!");
 });
-
 
 // PRODUCTION
 // app.use(express.static(path.join(__dirname, "../client/dist")));
@@ -177,4 +186,3 @@ app.listen(port, () => {
   connect();
   console.log("Server running on " + port);
 });
-

@@ -5,6 +5,7 @@ import { IKImage } from "imagekitio-react";
 import model from "../../lib/gemini";
 import Markdown from "react-markdown";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@clerk/clerk-react";
 
 const NewPrompt = ({ data }) => {
   const [question, setQuestion] = useState("");
@@ -15,6 +16,8 @@ const NewPrompt = ({ data }) => {
     dbData: {},
     aiData: {},
   });
+
+  const { getToken } = useAuth();
 
   // Initialize the chat session with correctly structured history
   const chat = model.startChat({
@@ -37,19 +40,27 @@ const NewPrompt = ({ data }) => {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
+      const token = await getToken();
+      
       return fetch(`${process.env.REACT_APP_API_URL}/api/chats/${data._id}`, {
         method: "PUT",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify({
           question: question.length ? question : undefined,
           answer,
           img: img.dbData?.filePath || undefined,
         }),
-      }).then((res) => res.json());
+      }).then((res) => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      });
     },
     onSuccess: () => {
       queryClient
@@ -81,7 +92,6 @@ const NewPrompt = ({ data }) => {
       let accumulatedText = "";
       for await (const chunk of result.stream) {
         const chunkText = chunk.text();
-        console.log(chunkText);
         accumulatedText += chunkText;
         setAnswer(accumulatedText);
       }
@@ -89,6 +99,8 @@ const NewPrompt = ({ data }) => {
       mutation.mutate();
     } catch (err) {
       console.log("Error sending message:", err);
+      // Reset states on error
+      setAnswer("Sorry, there was an error processing your request.");
     }
   };
 

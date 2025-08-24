@@ -13,8 +13,8 @@ const Homepage = () => {
         <h1>JAXAI</h1>
         <h2>Supercharge your creativity and productivity</h2>
         <h3>
-          Lorem ipsum dolor sit, amet consectetur adipisicing elit. Placeat sint
-          dolorem doloribus, architecto dolor.
+          AI Platform which empowers creative, fast and reiliable AI-driven
+          conversations with Image analysis
         </h3>
         <Link to="/dashboard">Get Started</Link>
       </div>
