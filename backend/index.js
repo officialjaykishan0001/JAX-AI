@@ -55,11 +55,14 @@ app.get("/api/upload", (req, res) => {
   res.send(result);
 });
 
-// app.get("/api/test", ClerkExpressRequireAuth(), (req, res) =>{
-//     const userId = req.auth.userId;
-//     console.log(userId)
-//     res.send("Success")
-// })
+app.get("/api/health", (req, res) =>{
+    res.send("API health is Good")
+})
+
+app.get('/', requireAuth(), (req, res) => {
+  res.send('Server is running.')
+})
+
 app.post("/api/chats", requireAuth(), async (req, res) => {
   const { userId } = getAuth(req);
 
